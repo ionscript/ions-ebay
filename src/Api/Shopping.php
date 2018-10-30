@@ -11,17 +11,17 @@ use Ions\Ebay\ResultSet;
  */
 class Shopping extends Api
 {
-    const LIMIT = 20;
-
-    const INCLUDE_SELECTOR = [
-        'Details' => true,
-        'Description' => true,
-        'TextDescription' => false,
-        'ShippingCosts' => false,
-        'ItemSpecifics' => true,
-        'Variations' => true,
-        'Compatibility' => false
-    ];
+//    const LIMIT = 20;
+//
+//    const INCLUDE_SELECTOR = [
+//        'Details' => true,
+//        'Description' => true,
+//        'TextDescription' => false,
+//        'ShippingCosts' => false,
+//        'ItemSpecifics' => true,
+//        'Variations' => true,
+//        'Compatibility' => false
+//    ];
 
     /**
      * @var array

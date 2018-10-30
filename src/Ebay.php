@@ -15,6 +15,10 @@ class Ebay
     const SERVER = 'ebay.com';
     const SANDBOX = 'sandbox.ebay.com';
 
+    private $api = [
+        'finding'
+    ];
+
     /**
      * @var Finding
      */
@@ -24,17 +28,14 @@ class Ebay
      * @var Shopping
      */
     private $shopping;
-
     /**
      * @var Trading
      */
     private $traiding;
-
     /**
      * @var
      */
     private static $data;
-
     /**
      * @var
      */
@@ -47,6 +48,10 @@ class Ebay
      * @var
      */
     private static $page;
+    /**
+     * @var
+     */
+    private static $error;
 
     /**
      * Ebay constructor.
@@ -54,22 +59,32 @@ class Ebay
      */
     public function __construct($settings)
     {
-        $server = isset($settings['sandbox']) && $settings['sandbox'] ? static::SANDBOX : static::SERVER;
+        $api = new \Ions\Http\Client\Api();
 
-        $this->finding = new Finding(
+        $finding = new Finding(
             $server,
             $settings['key']
         );
 
-        $this->shopping = new Shopping(
-            $server,
-            $settings['key']
-        );
 
-        $this->traiding = new Trading(
-            $server,
-            $settings['token']
-        );
+        $api->set('finding', 'Finding::findItemsByKeywordsRequest');
+
+//        $server = isset($settings['sandbox']) && $settings['sandbox'] ? static::SANDBOX : static::SERVER;
+//
+//        $this->finding = new Finding(
+//            $server,
+//            $settings['key']
+//        );
+//
+//        $this->shopping = new Shopping(
+//            $server,
+//            $settings['key']
+//        );
+//
+//        $this->traiding = new Trading(
+//            $server,
+//            $settings['token']
+//        );
     }
 
     /**
@@ -86,7 +101,7 @@ class Ebay
                 $data['category'],
                 [
                     'pageNumber' => $data['page'],
-                    'entriesPerPage' => $data['limit']
+                    'entriesPerPage' => !empty($data['limit']) ? $data['limit'] : Finding::LIMIT
                 ],
                 $data['item_filter'],
                 $data['sort_order']
@@ -97,7 +112,8 @@ class Ebay
                 static::$total = $result->total();
                 static::$pages = $result->pages();
                 static::$page = $result->page();
-
+            } else {
+                static::$error = $result->error();
             }
         }
 
@@ -118,7 +134,7 @@ class Ebay
                 $data['keywords'],
                 [
                     'pageNumber' => $data['page'],
-                    'entriesPerPage' => $data['limit']
+                    'entriesPerPage' => !empty($data['limit']) ? $data['limit'] : Finding::LIMIT
                 ],
                 $data['item_filter'],
                 $data['sort_order']
@@ -128,7 +144,44 @@ class Ebay
                 static::$data = $result->items();
                 static::$total = $result->total();
                 static::$pages = $result->pages();
-                static::$page = $result->page();}
+                static::$page = $result->page();
+            } else {
+                static::$error = $result->error();
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param array $data
+     * @return $this
+     */
+    public function getItemsAdvanced(array $data)
+    {
+        Finding::$global_id = $data['global_id'];
+
+        if ($data['category'] || $data['keywords']) {
+
+            $result = $this->finding->findItemsAdvanced(
+                $data['category'] ?: '',
+                $data['keywords'] ?: '',
+                [
+                    'pageNumber' => $data['page'],
+                    'entriesPerPage' => !empty($data['limit']) ? $data['limit'] : Finding::LIMIT
+                ],
+                $data['item_filter'],
+                $data['sort_order']
+            );
+
+            if ($result->isSuccess()) {
+                static::$data = $result->items();
+                static::$total = $result->total();
+                static::$pages = $result->pages();
+                static::$page = $result->page();
+            } else {
+                static::$error = $result->error();
+            }
         }
 
         return $this;
@@ -142,25 +195,12 @@ class Ebay
     {
         Finding::$global_id = $data['global_id'];
 
-        if ($data['category'] || $data['keywords']) {
-
-            $result = $this->finding->findItemsAdvanced(
-                $data['category'] ?: '',
-                $data['keywords'] ?: '',
-                [
-                    'pageNumber' => isset($data['page']) ? $data['page'] : 1,
-                    'entriesPerPage' => $data['limit']
-                ],
-                $data['item_filter'],
-                $data['sort_order']
-            );
-
-            if ($result->isSuccess()) {
-                static::$data = $result->items();
-                static::$total = $result->total();
-                static::$pages = $result->pages();
-                static::$page = $result->page();
-            }
+        if ($data['category'] && $data['keywords']) {
+            $this->getItemsAdvanced($data);
+        } elseif ($data['category']) {
+            $this->getItemsByCategory($data);
+        } elseif ($data['keywords']) {
+            $this->getItemsByKeywords($data);
         }
 
         return $this;
@@ -184,6 +224,8 @@ class Ebay
                 static::$total = count($data['ids']);
                 static::$pages = count($ids);
                 static::$page = $i;
+            } else {
+                static::$error = $result->error();
             }
         }
 
@@ -202,6 +244,8 @@ class Ebay
         if ($result->isSuccess()) {
             static::$data = $result->category();
             static::$total = $result->total();
+        } else {
+            static::$error = $result->error();
         }
 
         return $this;
@@ -229,6 +273,14 @@ class Ebay
     public static function getPage()
     {
         return self::$page;
+    }
+
+    /**
+     * @return mixed
+     */
+    public static function getError()
+    {
+        return self::$error;
     }
 
     /**

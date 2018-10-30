@@ -46,7 +46,7 @@ class ResultSet
         if($this->response->errorMessage) {
             $error = [
                 'code' => (string)$this->response->errorMessage->error->errorId,
-                'message' => (string)$this->response->errorMessage->error
+                'message' => (string)$this->response->errorMessage->error->message
             ];
         } elseif($this->response->Errors) {
             $error = [
@@ -81,7 +81,7 @@ class ResultSet
     /**
      * @return array
      */
-    public function items()
+    public function items($array = true)
     {
         $items = [];
 
@@ -91,7 +91,7 @@ class ResultSet
             }
         }
 
-        return $items;
+        return json_decode(json_encode($items), $array);
     }
 
     /**
@@ -132,6 +132,14 @@ class ResultSet
     public function isSuccess()
     {
         return static::$ack === 'Success';
+    }
+
+    /**
+     * @return bool
+     */
+    public function isError()
+    {
+        return static::$ack === 'Failure';
     }
 
     /**
